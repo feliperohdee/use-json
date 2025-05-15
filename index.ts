@@ -15,6 +15,37 @@ class EnhancedJSON {
 	private static readonly originalStringify = JSON.stringify;
 	private static readonly originalParse = JSON.parse;
 
+	static safeParse<T = any>(text: string, reviver?: JsonReviver): T | string {
+		try {
+			return this.parse(text, reviver);
+		} catch (error) {
+			return text;
+		}
+	}
+
+	static parse<T = any>(text: string, reviver?: JsonReviver): T {
+		const enhancedReviver: JsonReviver = (key: string, value: any): any => {
+			// Check if value is an object with our type identifiers
+			if (isPlainObject(value)) {
+				if (value[TYPE_IDENTIFIERS.MAP] && Array.isArray(value.map)) {
+					return new Map(value.map);
+				}
+
+				if (value[TYPE_IDENTIFIERS.SET] && Array.isArray(value.set)) {
+					return new Set(value.set);
+				}
+
+				if (value[TYPE_IDENTIFIERS.REGEXP] && typeof value.source === 'string' && typeof value.flags === 'string') {
+					return new RegExp(value.source, value.flags);
+				}
+			}
+
+			return reviver ? reviver(key, value) : value;
+		};
+
+		return this.originalParse(text, enhancedReviver);
+	}
+
 	static stringify(value: unknown, replacer?: JsonReplacer | (string | number)[] | null, space?: string | number): string {
 		const enhancedReplacer: JsonReplacer = (key: string, value: any): any => {
 			if (typeof replacer === 'function') {
@@ -47,29 +78,6 @@ class EnhancedJSON {
 		};
 
 		return this.originalStringify(value, enhancedReplacer, space);
-	}
-
-	static parse(text: string, reviver?: JsonReviver): any {
-		const enhancedReviver: JsonReviver = (key: string, value: any): any => {
-			// Check if value is an object with our type identifiers
-			if (isPlainObject(value)) {
-				if (value[TYPE_IDENTIFIERS.MAP] && Array.isArray(value.map)) {
-					return new Map(value.map);
-				}
-
-				if (value[TYPE_IDENTIFIERS.SET] && Array.isArray(value.set)) {
-					return new Set(value.set);
-				}
-
-				if (value[TYPE_IDENTIFIERS.REGEXP] && typeof value.source === 'string' && typeof value.flags === 'string') {
-					return new RegExp(value.source, value.flags);
-				}
-			}
-
-			return reviver ? reviver(key, value) : value;
-		};
-
-		return this.originalParse(text, enhancedReviver);
 	}
 }
 

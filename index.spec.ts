@@ -2,57 +2,6 @@ import { expect, describe, it } from 'vitest';
 import EnhancedJSON from './index';
 
 describe('/index', () => {
-	describe('stringify', () => {
-		it('should stringify Map correctly', () => {
-			const map = new Map([
-				['key1', 'value1'],
-				['key2', 'value2']
-			]);
-			const result = EnhancedJSON.stringify(map);
-			expect(result).toBe('{"__map__":true,"map":[["key1","value1"],["key2","value2"]]}');
-		});
-
-		it('should stringify Set correctly', () => {
-			const set = new Set(['value1', 'value2', 'value3']);
-			const result = EnhancedJSON.stringify(set);
-			expect(result).toBe('{"__set__":true,"set":["value1","value2","value3"]}');
-		});
-
-		it('should stringify RegExp correctly', () => {
-			const regexp = /test/gi;
-			const result = EnhancedJSON.stringify(regexp);
-			expect(result).toBe('{"__regexp__":true,"flags":"gi","source":"test"}');
-		});
-
-		it('should handle nested complex types', () => {
-			const data = {
-				map: new Map([['key1', new Set(['a', 'b'])]]),
-				set: new Set([new Map([['nested', 'value']])]),
-				regexp: /test/gi
-			};
-			const result = EnhancedJSON.stringify(data);
-			expect(result).toBe(
-				'{"map":{"__map__":true,"map":[["key1",{"__set__":true,"set":["a","b"]}]]},' +
-					'"set":{"__set__":true,"set":[{"__map__":true,"map":[["nested","value"]]}]},' +
-					'"regexp":{"__regexp__":true,"flags":"gi","source":"test"}}'
-			);
-		});
-
-		it('should work with custom replacer function', () => {
-			const map = new Map([['key1', 'value1']]);
-			const replacer = (key: string, value: any) => {
-				if (key === 'map') {
-					return 'replaced';
-				}
-
-				return value;
-			};
-
-			const result = EnhancedJSON.stringify(map, replacer);
-			expect(result).toBe('{"__map__":true,"map":"replaced"}');
-		});
-	});
-
 	describe('parse', () => {
 		it('should parse Map correctly', () => {
 			const json = '{"__map__":true,"map":[["key1","value1"],["key2","value2"]]}';
@@ -115,6 +64,73 @@ describe('/index', () => {
 
 			const result = EnhancedJSON.parse(json, reviver);
 			expect(result.map).toBe('revived');
+		});
+	});
+
+	describe('safeParse', () => {
+		it('should return the original text if it is not valid JSON', () => {
+			const text = 'invalid json';
+			const result = EnhancedJSON.safeParse(text);
+			expect(result).toBe(text);
+		});
+
+		it('should return the parsed object if it is valid JSON', () => {
+			const text = '{"map":{"__map__":true,"map":[["key1","value1"]]}}';
+			const result = EnhancedJSON.safeParse(text);
+
+			expect(result.map instanceof Map).toBe(true);
+			expect(result.map.get('key1')).toBe('value1');
+		});
+	});
+
+	describe('stringify', () => {
+		it('should stringify Map correctly', () => {
+			const map = new Map([
+				['key1', 'value1'],
+				['key2', 'value2']
+			]);
+			const result = EnhancedJSON.stringify(map);
+			expect(result).toBe('{"__map__":true,"map":[["key1","value1"],["key2","value2"]]}');
+		});
+
+		it('should stringify Set correctly', () => {
+			const set = new Set(['value1', 'value2', 'value3']);
+			const result = EnhancedJSON.stringify(set);
+			expect(result).toBe('{"__set__":true,"set":["value1","value2","value3"]}');
+		});
+
+		it('should stringify RegExp correctly', () => {
+			const regexp = /test/gi;
+			const result = EnhancedJSON.stringify(regexp);
+			expect(result).toBe('{"__regexp__":true,"flags":"gi","source":"test"}');
+		});
+
+		it('should handle nested complex types', () => {
+			const data = {
+				map: new Map([['key1', new Set(['a', 'b'])]]),
+				set: new Set([new Map([['nested', 'value']])]),
+				regexp: /test/gi
+			};
+			const result = EnhancedJSON.stringify(data);
+			expect(result).toBe(
+				'{"map":{"__map__":true,"map":[["key1",{"__set__":true,"set":["a","b"]}]]},' +
+					'"set":{"__set__":true,"set":[{"__map__":true,"map":[["nested","value"]]}]},' +
+					'"regexp":{"__regexp__":true,"flags":"gi","source":"test"}}'
+			);
+		});
+
+		it('should work with custom replacer function', () => {
+			const map = new Map([['key1', 'value1']]);
+			const replacer = (key: string, value: any) => {
+				if (key === 'map') {
+					return 'replaced';
+				}
+
+				return value;
+			};
+
+			const result = EnhancedJSON.stringify(map, replacer);
+			expect(result).toBe('{"__map__":true,"map":"replaced"}');
 		});
 	});
 
